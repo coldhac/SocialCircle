@@ -1,25 +1,26 @@
 package main.data;
 
 import main.models.*;
+import main.common.*;
 import java.io.*;
+import java.net.Socket;
 import java.util.*;
 
-// Data Manager - Singleton Pattern
+// 数据管理器 - 客户端版本 (单例模式)
 public class DataManager {
     
     private static DataManager instance;
     
-    private List<Post> allPosts;
-    private Map<String, User> allUsers;
-    private User currentUser; // The user currently logged in
+    private User currentUser; // 当前登录用户
+    private Socket socket;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
     
-    private static final String DATA_FILE = "data.ser";
+    private static final String SERVER_HOST = "10.0.0.73";
+    private static final int SERVER_PORT = 8888;
     
     private DataManager() {
-        allPosts = new ArrayList<>();
-        allUsers = new HashMap<>();
-        // Do not set currentUser here anymore, wait for login
-        initUsers(); 
+        connectToServer();
     }
     
     public static DataManager getInstance() {
@@ -29,67 +30,94 @@ public class DataManager {
         return instance;
     }
     
-    // Initialize default users with password "123456"
-    private void initUsers() {
-        if (allUsers.isEmpty()) {
-            registerUser("alice", "123456", "Alice");
-            registerUser("bob", "123456", "Bob");
-            registerUser("charlie", "123456", "Charlie");
+    // 连接到服务器
+    private void connectToServer() {
+        try {
+            socket = new Socket(SERVER_HOST, SERVER_PORT);
+            // 注意：先创建输出流，再创建输入流，否则会死锁
+            out = new ObjectOutputStream(socket.getOutputStream());
+            in = new ObjectInputStream(socket.getInputStream());
+            System.out.println("Connected to server.");
+        } catch (IOException e) {
+            System.err.println("Failed to connect to server: " + e.getMessage());
+        }
+    }
+    
+    // 发送请求并等待响应的通用方法
+    private Response sendRequest(Request req) {
+        if (socket == null || socket.isClosed()) {
+            return new Response(false, "Not connected to server", null);
+        }
+        try {
+            out.writeObject(req);
+            out.flush();
+            return (Response) in.readObject();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Response(false, "Network error: " + e.getMessage(), null);
         }
     }
 
-    // New: Register a new user
+    // 注册用户
     public boolean registerUser(String username, String password, String displayName) {
-        if (allUsers.containsKey(username)) {
-            return false; // Username already exists
-        }
         User newUser = new User(username, displayName, password);
-        allUsers.put(username, newUser);
-        return true;
+        Response res = sendRequest(new Request(RequestType.REGISTER, newUser));
+        return res.isSuccess();
     }
 
-    // New: Login logic
+    // 登录
     public boolean login(String username, String password) {
-        User user = allUsers.get(username);
-        if (user != null && user.checkPassword(password)) {
-            this.currentUser = user;
+        Response res = sendRequest(new Request(RequestType.LOGIN, username, password));
+        if (res.isSuccess()) {
+            this.currentUser = (User) res.getPayload();
             return true;
         }
         return false;
     }
 
-    // New: Logout logic
+    // 登出
     public void logout() {
         this.currentUser = null;
     }
     
+    // 发布帖子
     public void addPost(Post post) {
-        allPosts.add(0, post); 
+        sendRequest(new Request(RequestType.ADD_POST, post));
     }
     
+    // 删除帖子
     public void removePost(Post post) {
-        allPosts.remove(post);
+        sendRequest(new Request(RequestType.DELETE_POST, post));
     }
     
+    // 获取所有帖子 (从服务器获取)
+    @SuppressWarnings("unchecked")
     public List<Post> getAllPosts() {
-        return allPosts;
+        Response res = sendRequest(new Request(RequestType.GET_ALL_POSTS, null));
+        if (res.isSuccess() && res.getPayload() instanceof List) {
+            return (List<Post>) res.getPayload();
+        }
+        return new ArrayList<>();
     }
     
+    // 获取特定用户的帖子
     public List<Post> getUserPosts(User user) {
+        List<Post> allPosts = getAllPosts();
         List<Post> userPosts = new ArrayList<>();
         for (Post post : allPosts) {
-            if (post.getAuthor().equals(user)) {
+            if (post.getAuthor().getUsername().equals(user.getUsername())) {
                 userPosts.add(post);
             }
         }
         return userPosts;
     }
     
+    // 搜索帖子 (在本地过滤服务器返回的数据)
     public List<Post> searchPosts(String keyword) {
         List<Post> results = new ArrayList<>();
         String lower = keyword.toLowerCase();
         
-        for (Post post : allPosts) {
+        for (Post post : getAllPosts()) {
             if (post.getContent().toLowerCase().contains(lower)) {
                 results.add(post);
                 continue;
@@ -102,58 +130,34 @@ public class DataManager {
         return results;
     }
     
+    // 排序逻辑 (客户端处理)
     public List<Post> sortByTime() {
-        List<Post> sorted = new ArrayList<>(allPosts);
-        sorted.sort((p1, p2) -> p2.getTimestamp().compareTo(p1.getTimestamp()));
-        return sorted;
+        // 服务器默认就是时间排序
+        return getAllPosts();
     }
     
     public List<Post> sortByLikes() {
-        List<Post> sorted = new ArrayList<>(allPosts);
-        sorted.sort((p1, p2) -> Integer.compare(p2.getLikeCount(), p1.getLikeCount()));
-        return sorted;
+        List<Post> posts = getAllPosts();
+        posts.sort((p1, p2) -> Integer.compare(p2.getLikeCount(), p1.getLikeCount()));
+        return posts;
     }
     
-    public void saveData() {
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(DATA_FILE))) {
-            out.writeObject(allUsers);
-            out.writeObject(allPosts);
-            // No need to save currentUser state for next launch, force login
-            System.out.println("Data saved successfully.");
-        } catch (Exception e) {
-            System.err.println("Failed to save data: " + e.getMessage());
-        }
+    // 更新帖子状态（点赞/评论）
+    public void updatePost(Post post, RequestType type) {
+        sendRequest(new Request(type, post));
     }
     
-    @SuppressWarnings("unchecked")
-    public void loadData() {
-        File file = new File(DATA_FILE);
-        if (!file.exists()) {
-            System.out.println("No saved data found.");
-            return;
-        }
-        
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
-            allUsers = (Map<String, User>) in.readObject();
-            allPosts = (List<Post>) in.readObject();
-            // Do not load currentUser, user must login again
-            System.out.println("Data loaded successfully.");
-        } catch (Exception e) {
-            System.err.println("Failed to load data: " + e.getMessage());
-            // If load fails (e.g. class changed), ensure default users exist
-            initUsers();
-        }
-    }
-    
+    // 获取当前用户
     public User getCurrentUser() {
         return currentUser;
     }
     
-    public User getUser(String username) {
-        return allUsers.get(username);
-    }
-    
-    public Collection<User> getAllUsers() {
-        return allUsers.values();
+    // 关闭连接
+    public void close() {
+        try {
+            if (socket != null) socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

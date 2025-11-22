@@ -4,3 +4,4 @@
 .project
 bin/*
 data.ser
+server_data.ser

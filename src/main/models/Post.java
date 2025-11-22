@@ -6,9 +6,12 @@ import java.util.*;
 // 帖子类 - 继承SocialEntity，实现Likeable接口
 public class Post extends SocialEntity implements Likeable, Serializable {
     
-    private String imagePath;
-    private Set<String> likedUsers;  // 使用Set存储点赞用户，避免重复
-    private List<Comment> comments;   // 使用List存储评论
+    private static final long serialVersionUID = 1L;
+    
+    private String imagePath; // 本地路径（仅用于显示文件名）
+    private byte[] imageBytes; // 新增：图片的二进制数据，用于网络传输
+    private Set<String> likedUsers; // 存储点赞用户名的集合
+    private List<Comment> comments; // 评论列表
     
     public Post(User author, String content, String imagePath) {
         super(author, content);
@@ -22,16 +25,14 @@ public class Post extends SocialEntity implements Likeable, Serializable {
         return "Post";
     }
     
-    // 实现Likeable接口的方法
+    // 切换点赞状态
     @Override
     public boolean toggleLike(String username) {
         if (likedUsers.contains(username)) {
             likedUsers.remove(username);
-            author.removeLike();
             return false;
         } else {
             likedUsers.add(username);
-            author.addLike();
             return true;
         }
     }
@@ -46,11 +47,12 @@ public class Post extends SocialEntity implements Likeable, Serializable {
         return likedUsers.contains(username);
     }
     
-    // 评论相关方法
+    // 添加评论
     public void addComment(Comment comment) {
         comments.add(comment);
     }
     
+    // 删除评论
     public boolean removeComment(Comment comment) {
         return comments.remove(comment);
     }
@@ -63,9 +65,18 @@ public class Post extends SocialEntity implements Likeable, Serializable {
         return comments.size();
     }
     
-    // Getters
     public String getImagePath() {
         return imagePath;
+    }
+    
+    // 获取图片数据
+    public byte[] getImageBytes() {
+        return imageBytes;
+    }
+
+    // 设置图片数据
+    public void setImageBytes(byte[] imageBytes) {
+        this.imageBytes = imageBytes;
     }
     
     public Set<String> getLikedUsers() {

@@ -8,8 +8,9 @@ import javafx.scene.paint.Color;
 import main.data.DataManager;
 import main.models.*;
 import main.utils.ValidationUtil;
+import main.common.RequestType; // 导入请求类型
 
-// 帖子详情对话框
+// Post Detail Dialog
 public class PostDetailDialog extends Dialog<Void> {
     
     private Post post;
@@ -21,7 +22,7 @@ public class PostDetailDialog extends Dialog<Void> {
         this.post = post;
         this.dataManager = DataManager.getInstance();
         
-        setTitle("details");
+        setTitle("Details");
         setResizable(true);
         getDialogPane().setPrefSize(650, 600);
         
@@ -38,17 +39,17 @@ public class PostDetailDialog extends Dialog<Void> {
         VBox box = new VBox(20);
         box.setPadding(new Insets(20));
         
-        // 帖子卡片
+        // Post Card
         VBox postCard = createPostCard();
         
-        // 评论标题
-        Label commentTitle = new Label("comments (" + post.getCommentCount() + ")");
+        // Comments Title
+        Label commentTitle = new Label("Comments (" + post.getCommentCount() + ")");
         commentTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
         
-        // 评论输入
+        // Comment Input
         VBox commentInput = createCommentInput();
         
-        // 评论列表
+        // Comments List
         commentsBox = new VBox(10);
         loadComments();
         
@@ -63,7 +64,7 @@ public class PostDetailDialog extends Dialog<Void> {
         card.setPadding(new Insets(15));
         card.setStyle("-fx-background-color: white; -fx-background-radius: 8;");
         
-        // 用户信息
+        // User Info
         HBox userBar = new HBox(10);
         Label userName = new Label(post.getAuthor().getDisplayName());
         userName.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
@@ -71,34 +72,37 @@ public class PostDetailDialog extends Dialog<Void> {
         time.setTextFill(Color.GRAY);
         userBar.getChildren().addAll(userName, time);
         
-        // 内容
+        // Content
         Label content = new Label(post.getContent());
         content.setWrapText(true);
         content.setStyle("-fx-font-size: 14px;");
         
-        // 图片
-        if (post.getImagePath() != null && !post.getImagePath().isEmpty()) {
+        // Image (Updated logic for byte array)
+        if (post.getImageBytes() != null && post.getImageBytes().length > 0) {
             try {
-                javafx.scene.image.Image img = new javafx.scene.image.Image(
-                    "file:" + post.getImagePath(), 600, 450, true, true);
+                java.io.ByteArrayInputStream bis = new java.io.ByteArrayInputStream(post.getImageBytes());
+                javafx.scene.image.Image img = new javafx.scene.image.Image(bis, 600, 450, true, true);
                 javafx.scene.image.ImageView imgView = new javafx.scene.image.ImageView(img);
                 imgView.setFitWidth(600);
                 imgView.setPreserveRatio(true);
                 card.getChildren().add(imgView);
             } catch (Exception e) {
-                Label error = new Label("failed to load image");
-                error.setTextFill(Color.RED);
-                card.getChildren().add(error);
+                card.getChildren().add(new Label("Error loading image"));
             }
+        } else if (post.getImagePath() != null && !post.getImagePath().isEmpty()) {
+            // Fallback for old local files
+            Label pathLabel = new Label("[Image: " + post.getImagePath() + "]");
+            pathLabel.setTextFill(Color.GRAY);
+            card.getChildren().add(pathLabel);
         }
         
-        // 互动栏
+        // Actions Bar
         HBox actions = new HBox(15);
         
-        String currentUser = dataManager.getCurrentUser().getUsername();
-        boolean liked = post.isLikedBy(currentUser);
+        User currentUser = dataManager.getCurrentUser();
+        boolean liked = currentUser != null && post.isLikedBy(currentUser.getUsername());
         
-        likeBtn = new Button((liked ? "❤️ liked" : "🤍 like") + " (" + post.getLikeCount() + ")");
+        likeBtn = new Button((liked ? "❤️ Liked" : "🤍 Like") + " (" + post.getLikeCount() + ")");
         likeBtn.setOnAction(e -> toggleLike());
         
         Label commentLabel = new Label("💬 " + post.getCommentCount() + " comments");
@@ -116,11 +120,11 @@ public class PostDetailDialog extends Dialog<Void> {
         box.setStyle("-fx-background-color: white; -fx-background-radius: 8;");
         
         TextArea commentArea = new TextArea();
-        commentArea.setPromptText("write your comment...");
+        commentArea.setPromptText("Write your comment...");
         commentArea.setPrefRowCount(2);
         commentArea.setWrapText(true);
         
-        Button submitBtn = new Button("publish");
+        Button submitBtn = new Button("Publish");
         submitBtn.setStyle("-fx-background-color: #1877f2; -fx-text-fill: white;");
         submitBtn.setOnAction(e -> {
             String text = commentArea.getText().trim();
@@ -138,13 +142,12 @@ public class PostDetailDialog extends Dialog<Void> {
         commentsBox.getChildren().clear();
         
         if (post.getComments().isEmpty()) {
-            Label empty = new Label("no comments yet");
+            Label empty = new Label("No comments yet");
             empty.setStyle("-fx-text-fill: gray;");
             commentsBox.getChildren().add(empty);
             return;
         }
         
-        // 使用Iterator遍历评论
         java.util.Iterator<Comment> iterator = post.getComments().iterator();
         while (iterator.hasNext()) {
             Comment comment = iterator.next();
@@ -169,11 +172,12 @@ public class PostDetailDialog extends Dialog<Void> {
         
         userBar.getChildren().addAll(userName, time);
         
-        // 删除按钮（只有作者能看到）
-        if (comment.getAuthor().equals(dataManager.getCurrentUser())) {
+        // Delete button (Only for author)
+        if (dataManager.getCurrentUser() != null && 
+            comment.getAuthor().getUsername().equals(dataManager.getCurrentUser().getUsername())) {
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
-            Button deleteBtn = new Button("delete");
+            Button deleteBtn = new Button("Delete");
             deleteBtn.setStyle("-fx-font-size: 11px;");
             deleteBtn.setOnAction(e -> deleteComment(comment));
             userBar.getChildren().addAll(spacer, deleteBtn);
@@ -191,7 +195,10 @@ public class PostDetailDialog extends Dialog<Void> {
         String currentUser = dataManager.getCurrentUser().getUsername();
         boolean liked = post.toggleLike(currentUser);
         
-        likeBtn.setText((liked ? "❤️ liked" : "🤍 like") + " (" + post.getLikeCount() + ")");
+        likeBtn.setText((liked ? "❤️ Liked" : "🤍 Like") + " (" + post.getLikeCount() + ")");
+        
+        // [关键修改] 同步到服务器
+        dataManager.updatePost(post, RequestType.TOGGLE_LIKE);
     }
     
     private boolean addComment(String text) {
@@ -204,18 +211,27 @@ public class PostDetailDialog extends Dialog<Void> {
         Comment comment = new Comment(dataManager.getCurrentUser(), text, post);
         post.addComment(comment);
         
+        // [关键修改] 同步到服务器
+        dataManager.updatePost(post, RequestType.ADD_COMMENT);
+        
         loadComments();
         return true;
     }
     
     private void deleteComment(Comment comment) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("yes");
-        alert.setHeaderText("delete this comment?");
+        alert.setTitle("Confirm");
+        alert.setHeaderText("Delete this comment?");
         
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 post.removeComment(comment);
+                
+                // [关键修改] 同步到服务器
+                // 注意：为了确保服务器处理删除逻辑，我们可以重用 ADD_COMMENT 类型
+                // 因为服务器逻辑只是简单的 updatePost (覆盖整个 Post 对象)
+                dataManager.updatePost(post, RequestType.ADD_COMMENT);
+                
                 loadComments();
             }
         });
@@ -223,7 +239,7 @@ public class PostDetailDialog extends Dialog<Void> {
     
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("error");
+        alert.setTitle("Error");
         alert.setContentText(message);
         alert.showAndWait();
     }

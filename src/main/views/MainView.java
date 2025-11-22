@@ -157,7 +157,21 @@ public class MainView {
         content.setStyle("-fx-font-size: 14px;");
         
         // Image
-        if (post.getImagePath() != null && !post.getImagePath().isEmpty()) {
+        if (post.getImageBytes() != null && post.getImageBytes().length > 0) {
+            try {
+                // 从字节数组加载图片
+                java.io.ByteArrayInputStream bis = new java.io.ByteArrayInputStream(post.getImageBytes());
+                javafx.scene.image.Image img = new javafx.scene.image.Image(bis, 550, 400, true, true);
+                javafx.scene.image.ImageView imgView = new javafx.scene.image.ImageView(img);
+                imgView.setFitWidth(550);
+                imgView.setPreserveRatio(true);
+                card.getChildren().add(imgView);
+            } catch (Exception ex) {
+                Label error = new Label("Failed to load image");
+                error.setTextFill(Color.RED);
+                card.getChildren().add(error);
+            }
+        } else if (post.getImagePath() != null && !post.getImagePath().isEmpty()) {
             try {
                 javafx.scene.image.Image img = new javafx.scene.image.Image(
                     "file:" + post.getImagePath(), 550, 400, true, true);
@@ -182,7 +196,9 @@ public class MainView {
         Button likeBtn = new Button((liked ? "❤️ Liked" : "🤍 Like") + " (" + post.getLikeCount() + ")");
         likeBtn.setStyle("-fx-background-color: transparent;");
         likeBtn.setOnAction(e -> {
+            // 更新点赞逻辑
             post.toggleLike(currentUser);
+            DataManager.getInstance().updatePost(post, main.common.RequestType.TOGGLE_LIKE); // 发送到服务器
             loadFeed();
         });
         

@@ -80,10 +80,20 @@ public class UserPageDialog extends Dialog<Void> {
         box.setStyle("-fx-background-color: white; -fx-background-radius: 8;");
         box.setAlignment(Pos.CENTER);
         
+        // 获取该用户的所有帖子
         List<Post> userPosts = dataManager.getUserPosts(user);
         
-        VBox postsBox = createStatBox("posts", String.valueOf(userPosts.size()));
-        VBox likesBox = createStatBox("likes", String.valueOf(user.getTotalLikes()));
+        // [关键修改] 动态计算所有帖子的点赞总数
+        int calculatedTotalLikes = 0;
+        for (Post post : userPosts) {
+            calculatedTotalLikes += post.getLikeCount();
+        }
+        
+        // 显示帖子数量
+        VBox postsBox = createStatBox("Posts", String.valueOf(userPosts.size()));
+        
+        // 显示计算出的点赞总数，而不是 user.getTotalLikes()
+        VBox likesBox = createStatBox("Likes", String.valueOf(calculatedTotalLikes));
         
         box.getChildren().addAll(postsBox, new Separator(javafx.geometry.Orientation.VERTICAL), likesBox);
         
