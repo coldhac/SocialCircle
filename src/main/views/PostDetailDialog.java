@@ -21,7 +21,7 @@ public class PostDetailDialog extends Dialog<Void> {
         this.post = post;
         this.dataManager = DataManager.getInstance();
         
-        setTitle("详情");
+        setTitle("details");
         setResizable(true);
         getDialogPane().setPrefSize(650, 600);
         
@@ -30,7 +30,8 @@ public class PostDetailDialog extends Dialog<Void> {
         scroll.setFitToWidth(true);
         
         getDialogPane().setContent(scroll);
-        getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        ButtonType closeBtn = new ButtonType("Back", ButtonBar.ButtonData.CANCEL_CLOSE);
+        getDialogPane().getButtonTypes().add(closeBtn);
     }
     
     private VBox createContent() {
@@ -41,7 +42,7 @@ public class PostDetailDialog extends Dialog<Void> {
         VBox postCard = createPostCard();
         
         // 评论标题
-        Label commentTitle = new Label("评论 (" + post.getCommentCount() + ")");
+        Label commentTitle = new Label("comments (" + post.getCommentCount() + ")");
         commentTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
         
         // 评论输入
@@ -85,7 +86,7 @@ public class PostDetailDialog extends Dialog<Void> {
                 imgView.setPreserveRatio(true);
                 card.getChildren().add(imgView);
             } catch (Exception e) {
-                Label error = new Label("图片加载失败");
+                Label error = new Label("failed to load image");
                 error.setTextFill(Color.RED);
                 card.getChildren().add(error);
             }
@@ -97,10 +98,10 @@ public class PostDetailDialog extends Dialog<Void> {
         String currentUser = dataManager.getCurrentUser().getUsername();
         boolean liked = post.isLikedBy(currentUser);
         
-        likeBtn = new Button((liked ? "❤️ 已赞" : "🤍 点赞") + " (" + post.getLikeCount() + ")");
+        likeBtn = new Button((liked ? "❤️ liked" : "🤍 like") + " (" + post.getLikeCount() + ")");
         likeBtn.setOnAction(e -> toggleLike());
         
-        Label commentLabel = new Label("💬 " + post.getCommentCount() + " 条评论");
+        Label commentLabel = new Label("💬 " + post.getCommentCount() + " comments");
         
         actions.getChildren().addAll(likeBtn, commentLabel);
         
@@ -115,11 +116,11 @@ public class PostDetailDialog extends Dialog<Void> {
         box.setStyle("-fx-background-color: white; -fx-background-radius: 8;");
         
         TextArea commentArea = new TextArea();
-        commentArea.setPromptText("写下你的评论...");
+        commentArea.setPromptText("write your comment...");
         commentArea.setPrefRowCount(2);
         commentArea.setWrapText(true);
         
-        Button submitBtn = new Button("发表");
+        Button submitBtn = new Button("publish");
         submitBtn.setStyle("-fx-background-color: #1877f2; -fx-text-fill: white;");
         submitBtn.setOnAction(e -> {
             String text = commentArea.getText().trim();
@@ -137,7 +138,7 @@ public class PostDetailDialog extends Dialog<Void> {
         commentsBox.getChildren().clear();
         
         if (post.getComments().isEmpty()) {
-            Label empty = new Label("还没有评论");
+            Label empty = new Label("no comments yet");
             empty.setStyle("-fx-text-fill: gray;");
             commentsBox.getChildren().add(empty);
             return;
@@ -172,7 +173,7 @@ public class PostDetailDialog extends Dialog<Void> {
         if (comment.getAuthor().equals(dataManager.getCurrentUser())) {
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
-            Button deleteBtn = new Button("删除");
+            Button deleteBtn = new Button("delete");
             deleteBtn.setStyle("-fx-font-size: 11px;");
             deleteBtn.setOnAction(e -> deleteComment(comment));
             userBar.getChildren().addAll(spacer, deleteBtn);
@@ -190,7 +191,7 @@ public class PostDetailDialog extends Dialog<Void> {
         String currentUser = dataManager.getCurrentUser().getUsername();
         boolean liked = post.toggleLike(currentUser);
         
-        likeBtn.setText((liked ? "❤️ 已赞" : "🤍 点赞") + " (" + post.getLikeCount() + ")");
+        likeBtn.setText((liked ? "❤️ liked" : "🤍 like") + " (" + post.getLikeCount() + ")");
     }
     
     private boolean addComment(String text) {
@@ -209,8 +210,8 @@ public class PostDetailDialog extends Dialog<Void> {
     
     private void deleteComment(Comment comment) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("确认");
-        alert.setHeaderText("删除这条评论?");
+        alert.setTitle("yes");
+        alert.setHeaderText("delete this comment?");
         
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
@@ -222,7 +223,7 @@ public class PostDetailDialog extends Dialog<Void> {
     
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle("error");
         alert.setContentText(message);
         alert.showAndWait();
     }

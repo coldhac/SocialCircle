@@ -41,35 +41,35 @@ public class MainView {
         topBar.setStyle("-fx-background-color: #4267B2;");
         topBar.setAlignment(Pos.CENTER_LEFT);
         
-        Label title = new Label("Social Circle");
+        Label title = new Label("HeYiWei");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white;");
         
-        Label userLabel = new Label("@" + dataManager.getCurrentUser().getUsername());
+        Label userLabel = new Label("User：" + dataManager.getCurrentUser().getUsername());
         userLabel.setStyle("-fx-text-fill: white;");
         
         searchField = new TextField();
-        searchField.setPromptText("搜索...");
+        searchField.setPromptText("Searching...");
         searchField.setPrefWidth(200);
         
-        Button searchBtn = new Button("搜索");
+        Button searchBtn = new Button("Search");
         searchBtn.setOnAction(e -> search());
         
         sortBox = new ComboBox<>();
-        sortBox.getItems().addAll("最新", "最多赞");
-        sortBox.setValue("最新");
+        sortBox.getItems().addAll("New", "Most Like");
+        sortBox.setValue("New");
         sortBox.setOnAction(e -> loadFeed());
         
-        Button newPostBtn = new Button("发布");
+        Button newPostBtn = new Button("Post");
         newPostBtn.setStyle("-fx-background-color: #42b72a; -fx-text-fill: white;");
         newPostBtn.setOnAction(e -> showNewPostDialog());
         
-        Button myPageBtn = new Button("我的主页");
+        Button myPageBtn = new Button("My posts");
         myPageBtn.setOnAction(e -> showUserPage(dataManager.getCurrentUser()));
         
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        //Region spacer = new Region();
+        //HBox.setHgrow(spacer, Priority.ALWAYS);
         
-        topBar.getChildren().addAll(title, userLabel, spacer, 
+        topBar.getChildren().addAll(title, userLabel, /*spacer, */
             searchField, searchBtn, sortBox, newPostBtn, myPageBtn);
         
         return topBar;
@@ -93,14 +93,14 @@ public class MainView {
         feedContainer.getChildren().clear();
         
         List<Post> posts;
-        if ("最多赞".equals(sortBox.getValue())) {
+        if ("Most Like".equals(sortBox.getValue())) {
             posts = dataManager.sortByLikes();
         } else {
             posts = dataManager.sortByTime();
         }
         
         if (posts.isEmpty()) {
-            Label empty = new Label("还没有动态");
+            Label empty = new Label("No posts yet");
             empty.setStyle("-fx-font-size: 16px; -fx-text-fill: gray;");
             feedContainer.getChildren().add(empty);
             return;
@@ -136,7 +136,7 @@ public class MainView {
         if (post.getAuthor().equals(dataManager.getCurrentUser())) {
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
-            Button deleteBtn = new Button("删除");
+            Button deleteBtn = new Button("Delete");
             deleteBtn.setOnAction(e -> deletePost(post));
             userBar.getChildren().addAll(spacer, deleteBtn);
         }
@@ -155,7 +155,7 @@ public class MainView {
                 imgView.setPreserveRatio(true);
                 card.getChildren().add(imgView);
             } catch (Exception ex) {
-                Label error = new Label("图片加载失败");
+                Label error = new Label("Failed to load image");
                 error.setTextFill(Color.RED);
                 card.getChildren().add(error);
             }
@@ -167,13 +167,13 @@ public class MainView {
         String currentUser = dataManager.getCurrentUser().getUsername();
         boolean liked = post.isLikedBy(currentUser);
         
-        Button likeBtn = new Button((liked ? "❤️" : "🤍") + " " + post.getLikeCount());
+        Button likeBtn = new Button((liked ? "❤️" : "like") + " " + post.getLikeCount());
         likeBtn.setOnAction(e -> {
             post.toggleLike(currentUser);
             loadFeed();
         });
         
-        Button commentBtn = new Button("💬 " + post.getCommentCount());
+        Button commentBtn = new Button("comments " + post.getCommentCount());
         commentBtn.setOnAction(e -> showPostDetail(post));
         
         actions.getChildren().addAll(likeBtn, commentBtn);
@@ -195,7 +195,7 @@ public class MainView {
         feedContainer.getChildren().clear();
         
         if (results.isEmpty()) {
-            Label empty = new Label("没找到相关内容");
+            Label empty = new Label("No such posts");
             empty.setStyle("-fx-text-fill: gray;");
             feedContainer.getChildren().add(empty);
         } else {
@@ -228,8 +228,8 @@ public class MainView {
     // 删除帖子
     private void deletePost(Post post) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("确认");
-        alert.setHeaderText("删除这条动态?");
+        alert.setTitle("Yes");
+        alert.setHeaderText("U sure?");
         
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {

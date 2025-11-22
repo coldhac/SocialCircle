@@ -18,11 +18,12 @@ public class NewPostDialog extends Dialog<Post> {
     private File imageFile;
     
     public NewPostDialog() {
-        setTitle("发布动态");
-        setHeaderText("分享新鲜事");
+        setTitle("New Posts");
+        setHeaderText("Share your life!");
         
-        ButtonType postBtn = new ButtonType("发布", ButtonBar.ButtonData.OK_DONE);
-        getDialogPane().getButtonTypes().addAll(postBtn, ButtonType.CANCEL);
+        ButtonType postBtn = new ButtonType("Post", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelBtn = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        getDialogPane().getButtonTypes().addAll(postBtn, cancelBtn);
         
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -30,20 +31,20 @@ public class NewPostDialog extends Dialog<Post> {
         grid.setPadding(new Insets(20));
         
         contentArea = new TextArea();
-        contentArea.setPromptText("说点什么...");
+        contentArea.setPromptText("Say someting?");
         contentArea.setPrefRowCount(5);
         contentArea.setWrapText(true);
         
         imageField = new TextField();
-        imageField.setPromptText("未选择图片");
+        imageField.setPromptText("Haven't select a image");
         imageField.setEditable(false);
         
-        Button chooseBtn = new Button("选择图片");
+        Button chooseBtn = new Button("Select image ");
         chooseBtn.setOnAction(e -> chooseImage());
         
-        grid.add(new Label("内容:"), 0, 0);
+        grid.add(new Label("content:"), 0, 0);
         grid.add(contentArea, 1, 0);
-        grid.add(new Label("图片:"), 0, 1);
+        grid.add(new Label("image:"), 0, 1);
         grid.add(imageField, 1, 1);
         grid.add(chooseBtn, 2, 1);
         
@@ -59,9 +60,9 @@ public class NewPostDialog extends Dialog<Post> {
     
     private void chooseImage() {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("选择图片");
+        fileChooser.setTitle("select image");
         fileChooser.getExtensionFilters().add(
-            new FileChooser.ExtensionFilter("图片", "*.png", "*.jpg", "*.gif")
+            new FileChooser.ExtensionFilter("image", "*.png", "*.jpg", "*.gif")
         );
         
         Stage stage = (Stage) getDialogPane().getScene().getWindow();
@@ -102,7 +103,7 @@ public class NewPostDialog extends Dialog<Post> {
     
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle("error");
         alert.setContentText(message);
         alert.showAndWait();
     }

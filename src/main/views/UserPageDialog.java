@@ -19,7 +19,7 @@ public class UserPageDialog extends Dialog<Void> {
         this.user = user;
         this.dataManager = DataManager.getInstance();
         
-        setTitle("用户主页");
+        setTitle("Profile Page");
         setResizable(true);
         getDialogPane().setPrefSize(700, 600);
         
@@ -42,7 +42,7 @@ public class UserPageDialog extends Dialog<Void> {
         HBox stats = createStats();
         
         // 帖子标题
-        Label title = new Label(user.getDisplayName() + " 的动态");
+        Label title = new Label(user.getDisplayName() + " posts");
         title.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
         
         // 帖子网格
@@ -81,8 +81,8 @@ public class UserPageDialog extends Dialog<Void> {
         
         List<Post> userPosts = dataManager.getUserPosts(user);
         
-        VBox postsBox = createStatBox("动态", String.valueOf(userPosts.size()));
-        VBox likesBox = createStatBox("获赞", String.valueOf(user.getTotalLikes()));
+        VBox postsBox = createStatBox("posts", String.valueOf(userPosts.size()));
+        VBox likesBox = createStatBox("likes", String.valueOf(user.getTotalLikes()));
         
         box.getChildren().addAll(postsBox, new Separator(javafx.geometry.Orientation.VERTICAL), likesBox);
         
@@ -112,7 +112,7 @@ public class UserPageDialog extends Dialog<Void> {
         List<Post> userPosts = dataManager.getUserPosts(user);
         
         if (userPosts.isEmpty()) {
-            Label empty = new Label("还没有发布动态");
+            Label empty = new Label("U haven't post anything yet");
             empty.setTextFill(Color.GRAY);
             grid.add(empty, 0, 0);
             return grid;
