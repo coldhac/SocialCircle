@@ -6,23 +6,26 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import main.controllers.AppController;
 import main.data.DataManager;
 import main.models.*;
 import java.util.List;
 
-// 主视图
+// Main View
 public class MainView {
     
     private Scene scene;
     private BorderPane root;
     private VBox feedContainer;
     private DataManager dataManager;
+    private AppController controller; // Reference to controller
     
     private TextField searchField;
     private ComboBox<String> sortBox;
     
-    public MainView() {
-        dataManager = DataManager.getInstance();
+    public MainView(AppController controller) {
+        this.controller = controller;
+        this.dataManager = DataManager.getInstance();
         
         root = new BorderPane();
         root.setStyle("-fx-background-color: #f0f2f5;");
@@ -34,48 +37,51 @@ public class MainView {
         loadFeed();
     }
     
-    // 创建顶部工具栏
+    // Create Top Bar
     private HBox createTopBar() {
         HBox topBar = new HBox(10);
-        topBar.setPadding(new Insets(15));
+        topBar.setPadding(new Insets(10, 15, 10, 15));
         topBar.setStyle("-fx-background-color: #4267B2;");
         topBar.setAlignment(Pos.CENTER_LEFT);
         
-        Label title = new Label("HeYiWei");
+        Label title = new Label("SocialCircle");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white;");
         
-        Label userLabel = new Label("User：" + dataManager.getCurrentUser().getUsername());
-        userLabel.setStyle("-fx-text-fill: white;");
+        Label userLabel = new Label("User: " + dataManager.getCurrentUser().getUsername());
+        userLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
         
         searchField = new TextField();
-        searchField.setPromptText("Searching...");
+        searchField.setPromptText("Search...");
         searchField.setPrefWidth(200);
         
-        Button searchBtn = new Button("Search");
+        Button searchBtn = new Button("🔍");
         searchBtn.setOnAction(e -> search());
         
         sortBox = new ComboBox<>();
-        sortBox.getItems().addAll("New", "Most Like");
-        sortBox.setValue("New");
+        sortBox.getItems().addAll("Newest", "Most Liked");
+        sortBox.setValue("Newest");
         sortBox.setOnAction(e -> loadFeed());
         
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        
         Button newPostBtn = new Button("Post");
-        newPostBtn.setStyle("-fx-background-color: #42b72a; -fx-text-fill: white;");
+        newPostBtn.setStyle("-fx-background-color: #42b72a; -fx-text-fill: white; -fx-font-weight: bold;");
         newPostBtn.setOnAction(e -> showNewPostDialog());
         
-        Button myPageBtn = new Button("My posts");
+        Button myPageBtn = new Button("My Profile");
         myPageBtn.setOnAction(e -> showUserPage(dataManager.getCurrentUser()));
         
-        //Region spacer = new Region();
-        //HBox.setHgrow(spacer, Priority.ALWAYS);
+        Button logoutBtn = new Button("Logout");
+        logoutBtn.setStyle("-fx-background-color: #d9534f; -fx-text-fill: white;");
+        logoutBtn.setOnAction(e -> controller.logout());
         
-        topBar.getChildren().addAll(title, userLabel, /*spacer, */
-            searchField, searchBtn, sortBox, newPostBtn, myPageBtn);
+        topBar.getChildren().addAll(title, searchField, searchBtn, sortBox, spacer, userLabel, newPostBtn, myPageBtn, logoutBtn);
         
         return topBar;
     }
     
-    // 创建中心区域
+    // Create Center Area
     private ScrollPane createCenter() {
         feedContainer = new VBox(15);
         feedContainer.setPadding(new Insets(20));
@@ -83,24 +89,24 @@ public class MainView {
         
         ScrollPane scroll = new ScrollPane(feedContainer);
         scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color: transparent;");
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: #f0f2f5;");
         
         return scroll;
     }
     
-    // 加载动态
+    // Load Feed
     private void loadFeed() {
         feedContainer.getChildren().clear();
         
         List<Post> posts;
-        if ("Most Like".equals(sortBox.getValue())) {
+        if ("Most Liked".equals(sortBox.getValue())) {
             posts = dataManager.sortByLikes();
         } else {
             posts = dataManager.sortByTime();
         }
         
         if (posts.isEmpty()) {
-            Label empty = new Label("No posts yet");
+            Label empty = new Label("No posts available yet.");
             empty.setStyle("-fx-font-size: 16px; -fx-text-fill: gray;");
             feedContainer.getChildren().add(empty);
             return;
@@ -111,47 +117,52 @@ public class MainView {
         }
     }
     
-    // 创建帖子卡片
+    // Create Post Card
     private VBox createPostCard(Post post) {
         VBox card = new VBox(10);
         card.setPadding(new Insets(15));
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 8;");
-        card.setMaxWidth(700);
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 0);");
+        card.setMaxWidth(600);
         
-        // 用户信息
+        // User Info
         HBox userBar = new HBox(10);
         userBar.setAlignment(Pos.CENTER_LEFT);
         
         Label userName = new Label(post.getAuthor().getDisplayName());
-        userName.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        userName.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-cursor: hand;");
         userName.setOnMouseClicked(e -> showUserPage(post.getAuthor()));
-        userName.setStyle("-fx-cursor: hand; -fx-font-weight: bold;");
         
         Label time = new Label(post.getFormattedTime());
         time.setTextFill(Color.GRAY);
+        time.setStyle("-fx-font-size: 12px;");
         
-        userBar.getChildren().addAll(userName, new Label("·"), time);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
         
-        // 删除按钮（只有作者能看到）
+        userBar.getChildren().addAll(userName, new Label("·"), time, spacer);
+        
+        // Delete Button (Only for author)
         if (post.getAuthor().equals(dataManager.getCurrentUser())) {
-            Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
             Button deleteBtn = new Button("Delete");
+            deleteBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: gray; -fx-font-size: 11px;");
+            deleteBtn.setOnMouseEntered(e -> deleteBtn.setStyle("-fx-background-color: #ffebee; -fx-text-fill: red; -fx-font-size: 11px;"));
+            deleteBtn.setOnMouseExited(e -> deleteBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: gray; -fx-font-size: 11px;"));
             deleteBtn.setOnAction(e -> deletePost(post));
-            userBar.getChildren().addAll(spacer, deleteBtn);
+            userBar.getChildren().add(deleteBtn);
         }
         
-        // 内容
+        // Content
         Label content = new Label(post.getContent());
         content.setWrapText(true);
+        content.setStyle("-fx-font-size: 14px;");
         
-        // 图片
+        // Image
         if (post.getImagePath() != null && !post.getImagePath().isEmpty()) {
             try {
                 javafx.scene.image.Image img = new javafx.scene.image.Image(
-                    "file:" + post.getImagePath(), 650, 400, true, true);
+                    "file:" + post.getImagePath(), 550, 400, true, true);
                 javafx.scene.image.ImageView imgView = new javafx.scene.image.ImageView(img);
-                imgView.setFitWidth(650);
+                imgView.setFitWidth(550);
                 imgView.setPreserveRatio(true);
                 card.getChildren().add(imgView);
             } catch (Exception ex) {
@@ -161,29 +172,31 @@ public class MainView {
             }
         }
         
-        // 互动栏
-        HBox actions = new HBox(15);
+        // Actions Bar
+        HBox actions = new HBox(20);
+        actions.setPadding(new Insets(10, 0, 0, 0));
         
         String currentUser = dataManager.getCurrentUser().getUsername();
         boolean liked = post.isLikedBy(currentUser);
         
-        Button likeBtn = new Button((liked ? "❤️" : "like") + " " + post.getLikeCount());
+        Button likeBtn = new Button((liked ? "❤️ Liked" : "🤍 Like") + " (" + post.getLikeCount() + ")");
+        likeBtn.setStyle("-fx-background-color: transparent;");
         likeBtn.setOnAction(e -> {
             post.toggleLike(currentUser);
             loadFeed();
         });
         
-        Button commentBtn = new Button("comments " + post.getCommentCount());
+        Button commentBtn = new Button("💬 Comments (" + post.getCommentCount() + ")");
+        commentBtn.setStyle("-fx-background-color: transparent;");
         commentBtn.setOnAction(e -> showPostDetail(post));
         
         actions.getChildren().addAll(likeBtn, commentBtn);
         
-        card.getChildren().addAll(userBar, content, actions);
+        card.getChildren().addAll(userBar, content, new Separator(), actions);
         
         return card;
     }
     
-    // 搜索
     private void search() {
         String keyword = searchField.getText().trim();
         if (keyword.isEmpty()) {
@@ -195,7 +208,7 @@ public class MainView {
         feedContainer.getChildren().clear();
         
         if (results.isEmpty()) {
-            Label empty = new Label("No such posts");
+            Label empty = new Label("No matching posts found.");
             empty.setStyle("-fx-text-fill: gray;");
             feedContainer.getChildren().add(empty);
         } else {
@@ -205,31 +218,27 @@ public class MainView {
         }
     }
     
-    // 显示发布对话框
     private void showNewPostDialog() {
         NewPostDialog dialog = new NewPostDialog();
         dialog.showAndWait();
         loadFeed();
     }
     
-    // 显示帖子详情
     private void showPostDetail(Post post) {
         PostDetailDialog dialog = new PostDetailDialog(post);
         dialog.showAndWait();
         loadFeed();
     }
     
-    // 显示用户主页
     private void showUserPage(User user) {
         UserPageDialog dialog = new UserPageDialog(user);
         dialog.showAndWait();
     }
     
-    // 删除帖子
     private void deletePost(Post post) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Yes");
-        alert.setHeaderText("U sure?");
+        alert.setTitle("Confirm Delete");
+        alert.setHeaderText("Are you sure you want to delete this post?");
         
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {

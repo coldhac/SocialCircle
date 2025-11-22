@@ -4,21 +4,22 @@ import main.models.*;
 import java.io.*;
 import java.util.*;
 
-// 数据管理器 - 单例模式
+// Data Manager - Singleton Pattern
 public class DataManager {
     
     private static DataManager instance;
     
     private List<Post> allPosts;
     private Map<String, User> allUsers;
-    private User currentUser;
+    private User currentUser; // The user currently logged in
     
     private static final String DATA_FILE = "data.ser";
     
     private DataManager() {
         allPosts = new ArrayList<>();
         allUsers = new HashMap<>();
-        initUsers();
+        // Do not set currentUser here anymore, wait for login
+        initUsers(); 
     }
     
     public static DataManager getInstance() {
@@ -28,35 +29,52 @@ public class DataManager {
         return instance;
     }
     
-    // 初始化默认用户
+    // Initialize default users with password "123456"
     private void initUsers() {
-        User alice = new User("alice", "Alice");
-        User bob = new User("bob", "Bob");
-        User charlie = new User("charlie", "Charlie");
-        
-        allUsers.put("alice", alice);
-        allUsers.put("bob", bob);
-        allUsers.put("charlie", charlie);
-        
-        currentUser = alice;
+        if (allUsers.isEmpty()) {
+            registerUser("alice", "123456", "Alice");
+            registerUser("bob", "123456", "Bob");
+            registerUser("charlie", "123456", "Charlie");
+        }
+    }
+
+    // New: Register a new user
+    public boolean registerUser(String username, String password, String displayName) {
+        if (allUsers.containsKey(username)) {
+            return false; // Username already exists
+        }
+        User newUser = new User(username, displayName, password);
+        allUsers.put(username, newUser);
+        return true;
+    }
+
+    // New: Login logic
+    public boolean login(String username, String password) {
+        User user = allUsers.get(username);
+        if (user != null && user.checkPassword(password)) {
+            this.currentUser = user;
+            return true;
+        }
+        return false;
+    }
+
+    // New: Logout logic
+    public void logout() {
+        this.currentUser = null;
     }
     
-    // 添加帖子
     public void addPost(Post post) {
-        allPosts.add(0, post);  // 添加到开头
+        allPosts.add(0, post); 
     }
     
-    // 删除帖子
     public void removePost(Post post) {
         allPosts.remove(post);
     }
     
-    // 获取所有帖子
     public List<Post> getAllPosts() {
         return allPosts;
     }
     
-    // 获取用户的帖子
     public List<Post> getUserPosts(User user) {
         List<Post> userPosts = new ArrayList<>();
         for (Post post : allPosts) {
@@ -67,18 +85,15 @@ public class DataManager {
         return userPosts;
     }
     
-    // 简单搜索 - 遍历所有帖子
     public List<Post> searchPosts(String keyword) {
         List<Post> results = new ArrayList<>();
         String lower = keyword.toLowerCase();
         
         for (Post post : allPosts) {
-            // 搜索内容
             if (post.getContent().toLowerCase().contains(lower)) {
                 results.add(post);
                 continue;
             }
-            // 搜索用户名
             if (post.getAuthor().getUsername().toLowerCase().contains(lower) ||
                 post.getAuthor().getDisplayName().toLowerCase().contains(lower)) {
                 results.add(post);
@@ -87,53 +102,49 @@ public class DataManager {
         return results;
     }
     
-    // 按时间排序
     public List<Post> sortByTime() {
         List<Post> sorted = new ArrayList<>(allPosts);
         sorted.sort((p1, p2) -> p2.getTimestamp().compareTo(p1.getTimestamp()));
         return sorted;
     }
     
-    // 按点赞数排序
     public List<Post> sortByLikes() {
         List<Post> sorted = new ArrayList<>(allPosts);
         sorted.sort((p1, p2) -> Integer.compare(p2.getLikeCount(), p1.getLikeCount()));
         return sorted;
     }
     
-    // 保存数据
     public void saveData() {
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(DATA_FILE))) {
             out.writeObject(allUsers);
             out.writeObject(allPosts);
-            out.writeObject(currentUser.getUsername());
-            System.out.println("数据已保存");
+            // No need to save currentUser state for next launch, force login
+            System.out.println("Data saved successfully.");
         } catch (Exception e) {
-            System.err.println("保存失败: " + e.getMessage());
+            System.err.println("Failed to save data: " + e.getMessage());
         }
     }
     
-    // 加载数据
     @SuppressWarnings("unchecked")
     public void loadData() {
         File file = new File(DATA_FILE);
         if (!file.exists()) {
-            System.out.println("没有保存的数据");
+            System.out.println("No saved data found.");
             return;
         }
         
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             allUsers = (Map<String, User>) in.readObject();
             allPosts = (List<Post>) in.readObject();
-            String username = (String) in.readObject();
-            currentUser = allUsers.get(username);
-            System.out.println("数据已加载");
+            // Do not load currentUser, user must login again
+            System.out.println("Data loaded successfully.");
         } catch (Exception e) {
-            System.err.println("加载失败: " + e.getMessage());
+            System.err.println("Failed to load data: " + e.getMessage());
+            // If load fails (e.g. class changed), ensure default users exist
+            initUsers();
         }
     }
     
-    // Getters
     public User getCurrentUser() {
         return currentUser;
     }

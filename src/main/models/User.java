@@ -2,16 +2,19 @@ package main.models;
 
 import java.io.Serializable;
 
-// 用户类
+// User class represents a registered user
 public class User implements Serializable {
     
+    private static final long serialVersionUID = 1L; // Recommended for Serializable
     private String username;
     private String displayName;
+    private String password; // New field for password
     private int totalLikes;
     
-    public User(String username, String displayName) {
+    public User(String username, String displayName, String password) {
         this.username = username;
         this.displayName = displayName;
+        this.password = password;
         this.totalLikes = 0;
     }
     
@@ -25,6 +28,11 @@ public class User implements Serializable {
     
     public int getTotalLikes() {
         return totalLikes;
+    }
+    
+    // Verify password
+    public boolean checkPassword(String inputPassword) {
+        return this.password != null && this.password.equals(inputPassword);
     }
     
     public void addLike() {

@@ -28,7 +28,8 @@ public class UserPageDialog extends Dialog<Void> {
         scroll.setFitToWidth(true);
         
         getDialogPane().setContent(scroll);
-        getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        ButtonType closeBtn = new ButtonType("Back", ButtonBar.ButtonData.CANCEL_CLOSE);
+        getDialogPane().getButtonTypes().add(closeBtn);
     }
     
     private VBox createContent() {
